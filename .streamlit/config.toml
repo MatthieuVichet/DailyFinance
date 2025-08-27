@@ -1,0 +1,9 @@
+[theme]
+base="light"
+primaryColor="#4F46E5"
+backgroundColor="#ffffff"
+secondaryBackgroundColor="#f6f7fb"
+textColor="#0f172a"
+
+[server]
+enableXsrfProtection=true

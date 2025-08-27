@@ -17,8 +17,8 @@ period_options = ["Week-to-Date", "Month-to-Date", "Year-to-Date",
                   "Last 7 Days", "Last 30 Days", "Last 365 Days"]
 
 # --- Load data ---
-income_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\income.xlsx"
-expense_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\expenses.xlsx"
+income_file = r"src\data\income.xlsx"
+expense_file = r"src\data\expenses.xlsx"
 today = datetime.today()
 
 def filter_period(df, period):

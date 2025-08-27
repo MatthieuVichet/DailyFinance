@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 st.title("New Expense/Income Recording & Category Management")
 
 # --- Paths ---
-income_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\income.xlsx"
-expense_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\expenses.xlsx"
-categories_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\categories.xlsx"
-recurring_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\recurring.xlsx"
+income_file = r"src/data/income.xlsx"
+expense_file = r"src/data/expenses.xlsx"
+categories_file = r"src/data/categories.xlsx"
+recurring_file = r"src/data/recurring.xlsx"
 
 # --- Load categories ---
 if os.path.exists(categories_file):

@@ -6,9 +6,9 @@ import os
 st.title("Recurring Transactions")
 
 # --- Paths ---
-recurring_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\recurring.xlsx"
-income_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\income.xlsx"
-expense_file = r"C:\Users\matth\OneDrive - Efrei\PersoApp\DailyFinance\src\data\expenses.xlsx"
+recurring_file = r"src/data/recurring.xlsx"
+income_file = r"src/data/income.xlsx"
+expense_file = r"src/data/expenses.xlsx"
 
 # --- Load recurring transactions ---
 try:

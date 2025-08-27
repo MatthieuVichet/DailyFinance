@@ -6,9 +6,9 @@ from src.features.charts import budget_bar_chart  # import the chart function
 st.title("Savings & Budget Tracking")
 
 # --- File paths ---
-budget_file = r"src\data\budget.xlsx"
-income_file = r"src\data\income.xlsx"
-expense_file = r"src\data\expenses.xlsx"
+budget_file = r"src/data/budget.xlsx"
+income_file = r"src/data/income.xlsx"
+expense_file = r"src/data/expenses.xlsx"
 
 # --- Select month & year ---
 today = datetime.today()

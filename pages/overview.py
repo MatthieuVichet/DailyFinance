@@ -5,9 +5,9 @@ from datetime import datetime
 st.title("Overview & Budget Alerts")
 
 # --- File paths ---
-income_file = r"src\data\income.xlsx"
-expense_file = r"src\data\expenses.xlsx"
-budget_file = r"src\data\budgets.xlsx"
+income_file = r"src/data/income.xlsx"
+expense_file = r"src/data/expenses.xlsx"
+budget_file = r"src/data/budgets.xlsx"
 
 # --- Load transactions ---
 income_df = pd.read_excel(income_file)

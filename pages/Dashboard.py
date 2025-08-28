@@ -1,11 +1,10 @@
 def run_dashboard():
     import streamlit as st
+    import os
     import pandas as pd
     from datetime import datetime, timedelta
     from sqlalchemy import create_engine
     import plotly.graph_objects as go
-    import socket
-    from urllib.parse import urlparse, urlunparse
     from src.features.charts import (
         category_pie, category_bar, category_line_with_trend,
         forecast_category, budget_bar_chart
@@ -15,27 +14,15 @@ def run_dashboard():
 
     # --- DB connection ---
     DB_URL = st.secrets["postgres"]["url"]
+    
+    # Path to certificate in your repo
+    cert_path = os.path.join("certs", "supabase.crt")
 
-    # Parse the URL
-    parsed = urlparse(DB_URL)
-    hostname = parsed.hostname
-
-    # Resolve IPv4 address
-    ipv4_address = socket.gethostbyname(hostname)
-
-    # Rebuild DB URL with IPv4 host
-    netloc = f"{parsed.username}:{parsed.password}@{ipv4_address}:{parsed.port}"
-    ipv4_db_url = urlunparse((
-        parsed.scheme,
-        netloc,
-        parsed.path,
-        parsed.params,
-        parsed.query,
-        parsed.fragment
-    ))
-
-    # Create engine with SSL
-    engine = create_engine(ipv4_db_url, connect_args={"sslmode": "require"})
+    # Create engine with SSL cert
+    engine = create_engine(
+        DB_URL,
+        connect_args={"sslmode": "verify-full", "sslrootcert": cert_path}
+    )
 
 
     # --- Sidebar Filters ---

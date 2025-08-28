@@ -45,7 +45,7 @@ def run_login():
                     if bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
                         st.session_state.user_id = user["id"]
                         st.session_state.user_email = user["email"]
-                        st.success(f"✅ Logged in as {email}")
+                        st.rerun()
                     else:
                         st.error("❌ Invalid password")
                 else:
@@ -75,7 +75,8 @@ def run_login():
                         "password_hash": pw_hash,
                         "full_name": full_name
                     }).execute()
-                    st.success("✅ Account created! Please login above.")
+                    st.success("✅ Account created! Please login.")
+
                     st.session_state.show_signup = False
             except Exception as e:
                 st.error(f"Error signing up: {e}")

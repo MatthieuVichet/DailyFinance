@@ -16,7 +16,7 @@ def run_dashboard():
     DB_URL = st.secrets["postgres"]["url"]
     
     # Path to certificate in your repo
-    cert_path = os.path.join("certs", "supabase.crt")
+    cert_path = os.path.join("certs", "prod-ca-2021.crt")
 
     # Create engine with SSL cert
     engine = create_engine(

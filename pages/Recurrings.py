@@ -2,16 +2,15 @@ def run_recurring():
     import streamlit as st
     import pandas as pd
     from datetime import datetime, timedelta
-    from sqlalchemy import create_engine, text
+    from st_supabase_connection import SupabaseConnection
 
     st.title("Recurring Transactions")
 
-    # --- Database connection ---
-    DB_URL = st.secrets["postgres"]["url"]
-    engine = create_engine(DB_URL)
+    # --- Connect to Supabase ---
+    conn = st.connection("supabase", type=SupabaseConnection)
 
     # --- Load active recurring transactions ---
-    recurring_df = pd.read_sql("SELECT * FROM recurrings WHERE active = TRUE", engine)
+    recurring_df = pd.DataFrame(conn.table("recurrings").select("*").execute().data)
     if recurring_df.empty:
         st.warning("No active recurring transactions found.")
         st.stop()
@@ -21,12 +20,12 @@ def run_recurring():
     recurring_df["end_date"] = pd.to_datetime(recurring_df["end_date"])
 
     # --- Load categories for display purposes ---
-    categories_df = pd.read_sql("SELECT id, category FROM categories", engine)
+    categories_df = pd.DataFrame(conn.table("categories").select("id", "category").execute().data)
 
     # --- Helper: generate future dates ---
     def generate_dates(row):
         dates = []
-        current = max(row["start_date"], datetime.today().date())
+        current = max(row["start_date"].date(), datetime.today().date())
         end = row["end_date"].date() if pd.notna(row["end_date"]) else current
         freq = row["frequency"].lower()
 
@@ -49,22 +48,19 @@ def run_recurring():
 
     # --- Generate and insert future entries ---
     new_entries_count = 0
-    with engine.begin() as conn:
-        for _, row in recurring_df.iterrows():
-            future_dates = generate_dates(row)
-            table = "incomes" if row["type"] == "Income" else "expenses"
+    for _, row in recurring_df.iterrows():
+        future_dates = generate_dates(row)
+        table = "incomes" if row["type"] == "Income" else "expenses"
 
-            for date in future_dates:
-                conn.execute(text(f"""
-                    INSERT INTO {table} (date, category_id, amount, title, comment)
-                    VALUES (:date, :category_id, :amount, :title, 'Recurring')
-                """), {
-                    "date": date,
-                    "category_id": int(row["category_id"]),
-                    "amount": float(row["amount"]),
-                    "title": row["title"]
-                })
-                new_entries_count += 1
+        for date in future_dates:
+            conn.table(table).insert({
+                "date": date,
+                "category_id": int(row["category_id"]),
+                "amount": float(row["amount"]),
+                "title": row["title"],
+                "comment": "Recurring"
+            }).execute()
+            new_entries_count += 1
 
     st.success(f"{new_entries_count} recurring entries generated!")
 

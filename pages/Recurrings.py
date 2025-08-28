@@ -8,7 +8,7 @@ def run_recurring():
 
     # --- Database connection ---
     DB_URL = st.secrets["postgres"]["url"]
-    engine = create_engine(DB_URL, connect_args={"sslmode": "verify-full"})
+    engine = create_engine(DB_URL, connect_args={"sslmode": "require"})
 
 
     # --- Load active recurring transactions ---

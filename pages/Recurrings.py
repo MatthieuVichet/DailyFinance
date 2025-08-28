@@ -4,13 +4,24 @@ def run_recurring():
     from datetime import datetime, timedelta
     from st_supabase_connection import SupabaseConnection
 
+    if "user_id" not in st.session_state or st.session_state.user_id is None:
+        from pages.Login import run_login
+        run_login()
+        return
+
     st.title("Recurring Transactions")
 
     # --- Connect to Supabase ---
     conn = st.connection("supabase", type=SupabaseConnection)
 
-    # --- Load active recurring transactions ---
-    recurring_df = pd.DataFrame(conn.table("recurrings").select("*").execute().data)
+    # --- Load active recurring transactions for this user only ---
+    recurring_df = pd.DataFrame(
+        conn.table("recurrings")
+            .select("*")
+            .eq("user_id", st.session_state.user_id)
+            .execute().data
+    )
+
     if recurring_df.empty:
         st.warning("No active recurring transactions found.")
         st.stop()
@@ -19,8 +30,13 @@ def run_recurring():
     recurring_df["start_date"] = pd.to_datetime(recurring_df["start_date"])
     recurring_df["end_date"] = pd.to_datetime(recurring_df["end_date"])
 
-    # --- Load categories for display purposes ---
-    categories_df = pd.DataFrame(conn.table("categories").select("id", "category").execute().data)
+    # --- Load categories for display purposes (user-specific) ---
+    categories_df = pd.DataFrame(
+        conn.table("categories")
+            .select("id", "category")
+            .eq("user_id", st.session_state.user_id)
+            .execute().data
+    )
 
     # --- Helper: generate future dates ---
     def generate_dates(row):
@@ -41,12 +57,12 @@ def run_recurring():
                 day = min(current.day, 28)
                 current = current.replace(year=year, month=month, day=day)
             elif freq == "yearly":
-                current = current.replace(year=current.year+1)
+                current = current.replace(year=current.year + 1)
             else:
                 break
         return dates
 
-    # --- Generate and insert future entries ---
+    # --- Generate and insert future entries (user-specific) ---
     new_entries_count = 0
     for _, row in recurring_df.iterrows():
         future_dates = generate_dates(row)
@@ -58,7 +74,8 @@ def run_recurring():
                 "category_id": int(row["category_id"]),
                 "amount": float(row["amount"]),
                 "title": row["title"],
-                "comment": "Recurring"
+                "comment": "Recurring",
+                "user_id": st.session_state.user_id
             }).execute()
             new_entries_count += 1
 

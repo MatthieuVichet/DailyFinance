@@ -10,6 +10,10 @@ def run_dashboard():
         category_pie, category_bar, category_line_with_trend,
         forecast_category, budget_bar_chart
     )
+    if "user_id" not in st.session_state or st.session_state.user_id is None:
+        from pages.Login import run_login
+        run_login()
+        return  # stop running dashboard until login
 
     st.title("📊 Dashboard & Budget Overview")
 
@@ -48,7 +52,8 @@ def run_dashboard():
 
     # --- Load table helper ---
     def load_table(table):
-        rows = conn.table(table).select("*").execute()
+        rows = conn.table(table).select("*").eq("user_id", st.session_state.user_id).execute()
+
         df = pd.DataFrame(rows.data)
 
         if df.empty:

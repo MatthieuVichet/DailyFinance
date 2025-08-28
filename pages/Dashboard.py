@@ -53,12 +53,54 @@ def run_dashboard():
         if df.empty:
             return df
 
-        # Try to detect a date column
-        for candidate in ["Date", "date", "created_at", "timestamp"]:
-            if candidate in df.columns:
-                df = df.rename(columns={candidate: "Date"})
-                df["Date"] = pd.to_datetime(df["Date"])
-                break
+        # Normalize column names depending on table
+        rename_map = {}
+
+        if table in ["incomes", "expenses"]:
+            rename_map = {
+                "date": "Date",
+                "amount": "Amount",
+                "comment": "Comment",
+                "title": "Title",
+                "category_id": "Category"
+            }
+
+        elif table == "budgets":
+            rename_map = {
+                "budget": "Budget",
+                "amount": "Amount",
+                "month": "Month",
+                "year": "Year",
+                "type": "Type",
+                "category_id": "Category"
+            }
+
+        elif table == "categories":
+            rename_map = {
+                "category": "Category",
+                "type": "Type",
+                "color": "Color",
+                "icon": "Icon"
+            }
+
+        elif table == "recurrings":
+            rename_map = {
+                "title": "Title",
+                "amount": "Amount",
+                "type": "Type",
+                "start_date": "Date",
+                "frequency": "Frequency",
+                "end_date": "EndDate",
+                "active": "Active",
+                "category_id": "Category"
+            }
+
+        # Apply renaming
+        df = df.rename(columns=rename_map)
+
+        # Ensure Date columns are datetime
+        if "Date" in df.columns:
+            df["Date"] = pd.to_datetime(df["Date"])
 
         return df
 

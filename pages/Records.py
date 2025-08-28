@@ -107,7 +107,7 @@ def run_recordings():
 
         # Insert main transaction
         conn.table(table).insert({
-            "date": date,
+            "date": date.isoformat(),  # convert to ISO string
             "category_id": int(category_id),
             "amount": float(amount),
             "title": title,
@@ -119,7 +119,7 @@ def run_recordings():
             future_dates = generate_dates(date, end_date, frequency)
             for d in future_dates[1:]:
                 conn.table(table).insert({
-                    "date": d,
+                    "date": d.isoformat(),  # convert to ISO string
                     "category_id": int(category_id),
                     "amount": float(amount),
                     "title": title,
@@ -132,9 +132,9 @@ def run_recordings():
                 "category_id": int(category_id),
                 "amount": float(amount),
                 "type": exp_or_inc,
-                "start_date": date,
+                "start_date": date.isoformat(),
                 "frequency": frequency,
-                "end_date": end_date,
+                "end_date": end_date.isoformat(),
                 "active": True
             }).execute()
 

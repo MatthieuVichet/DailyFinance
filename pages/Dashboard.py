@@ -4,6 +4,7 @@ def run_dashboard():
     from datetime import datetime, timedelta
     import plotly.graph_objects as go
     from st_supabase_connection import SupabaseConnection
+    import numpy as np 
 
     from src.features.charts import (
         category_pie, category_bar, category_line_with_trend,

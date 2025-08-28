@@ -47,12 +47,21 @@ def run_dashboard():
 
     # --- Load table helper ---
     def load_table(table):
-    # use the Supabase table API
         rows = conn.table(table).select("*").execute()
         df = pd.DataFrame(rows.data)
+
         if df.empty:
             return df
+
+        # Try to detect a date column
+        for candidate in ["Date", "date", "created_at", "timestamp"]:
+            if candidate in df.columns:
+                df = df.rename(columns={candidate: "Date"})
+                df["Date"] = pd.to_datetime(df["Date"])
+                break
+
         return df
+
 
     # --- Load data from Supabase ---
     incomes_df = load_table("incomes")

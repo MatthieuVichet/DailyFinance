@@ -10,13 +10,13 @@ def run_recurring():
     DB_URL = st.secrets["postgres"]["url"]
     engine = create_engine(DB_URL)
 
-
     # --- Load active recurring transactions ---
     recurring_df = pd.read_sql("SELECT * FROM recurrings WHERE active = TRUE", engine)
     if recurring_df.empty:
         st.warning("No active recurring transactions found.")
         st.stop()
 
+    # Ensure datetime columns
     recurring_df["start_date"] = pd.to_datetime(recurring_df["start_date"])
     recurring_df["end_date"] = pd.to_datetime(recurring_df["end_date"])
 
@@ -26,8 +26,8 @@ def run_recurring():
     # --- Helper: generate future dates ---
     def generate_dates(row):
         dates = []
-        current = max(row["start_date"], datetime.today())
-        end = row["end_date"]
+        current = max(row["start_date"], datetime.today().date())
+        end = row["end_date"].date() if pd.notna(row["end_date"]) else current
         freq = row["frequency"].lower()
 
         while current <= end:
@@ -58,12 +58,27 @@ def run_recurring():
                 conn.execute(text(f"""
                     INSERT INTO {table} (date, category_id, amount, title, comment)
                     VALUES (:date, :category_id, :amount, :title, 'Recurring')
-                """), {"date": date, "category_id": row["category_id"], "amount": row["amount"], "title": row["title"]})
+                """), {
+                    "date": date,
+                    "category_id": int(row["category_id"]),
+                    "amount": float(row["amount"]),
+                    "title": row["title"]
+                })
                 new_entries_count += 1
 
     st.success(f"{new_entries_count} recurring entries generated!")
 
     # --- Display active recurring transactions ---
-    recurring_display_df = recurring_df.merge(categories_df, left_on="category_id", right_on="id", how="left")
+    if not categories_df.empty:
+        recurring_display_df = recurring_df.merge(
+            categories_df.rename(columns={"category": "Category"}),
+            left_on="category_id", right_on="id", how="left"
+        )
+    else:
+        recurring_display_df = recurring_df.copy()
+        recurring_display_df["Category"] = None
+
     st.subheader("Active Recurring Transactions")
-    st.dataframe(recurring_display_df[["title","category","amount","type","start_date","frequency","end_date"]])
+    st.dataframe(recurring_display_df[[
+        "title", "Category", "amount", "type", "start_date", "frequency", "end_date"
+    ]])

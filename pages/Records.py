@@ -69,8 +69,8 @@ def run_recordings():
     exp_or_inc = st.selectbox("Is it an expense or an income?", options=["Expense","Income"])
     date = st.date_input("Date")
 
-    # Show category names for selection, but get category_id for inserts
-    categories_for_type = cat_df[cat_df["type"]==exp_or_inc][["id","category"]]
+    # Filter categories by type, keep category_id for inserts
+    categories_for_type = cat_df[cat_df["type"] == exp_or_inc][["id","category"]]
     category_name = st.selectbox("Category", options=categories_for_type["category"].tolist())
     category_id = categories_for_type[categories_for_type["category"]==category_name]["id"].values[0]
 
@@ -96,28 +96,27 @@ def run_recordings():
             elif freq.lower() == "monthly":
                 month = current.month + 1 if current.month < 12 else 1
                 year = current.year + (current.month // 12)
-                day = min(current.day,28)
+                day = min(current.day, 28)
                 current = current.replace(year=year, month=month, day=day)
             elif freq.lower() == "yearly":
                 current = current.replace(year=current.year+1)
             else:
                 break
         return dates
-# --- Save Transaction ---
+
+    # --- Save Transaction ---
     if st.button("Save Transaction"):
         table = "incomes" if exp_or_inc=="Income" else "expenses"
-        
-        # Convert to native Python types
         category_id_py = int(category_id)
         amount_py = float(amount)
-        
+
         with engine.begin() as conn:
-            # Insert main transaction (date-only)
+            # Insert main transaction
             conn.execute(text(f"""
                 INSERT INTO {table} (date, category_id, amount, title, comment)
                 VALUES (:date, :category_id, :amount, :title, :comment)
             """), {
-                "date": date,  # already datetime.date from st.date_input
+                "date": date,
                 "category_id": category_id_py,
                 "amount": amount_py,
                 "title": title,
@@ -132,7 +131,7 @@ def run_recordings():
                         INSERT INTO {table} (date, category_id, amount, title, comment)
                         VALUES (:date, :category_id, :amount, :title, 'Recurring')
                     """), {
-                        "date": d,  # each d is a datetime.date
+                        "date": d,
                         "category_id": category_id_py,
                         "amount": amount_py,
                         "title": title

@@ -47,22 +47,11 @@ def run_dashboard():
 
     # --- Load table helper ---
     def load_table(table):
-        rows = conn.query("*", table=table).execute()
+    # use the Supabase table API
+        rows = conn.table(table).select("*").execute()
         df = pd.DataFrame(rows.data)
         if df.empty:
             return df
-
-        # Ensure standard columns
-        for col, default in [
-            ("Category", "Unknown"), ("Amount", 0), ("Type", "Unknown"),
-            ("Color", "#808080"), ("Icon", "❓"),
-            ("Date", pd.Timestamp.today()), ("Comment", "")
-        ]:
-            if col not in df.columns:
-                df[col] = default
-
-        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-        df["Comment"] = df["Comment"].fillna("")
         return df
 
     # --- Load data from Supabase ---

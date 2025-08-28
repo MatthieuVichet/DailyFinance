@@ -157,8 +157,19 @@ def run_dashboard():
                 st.plotly_chart(category_line_with_trend(filtered_df), use_container_width=True)
 
             with st.expander("Predictive Analytics / Linear Forecast"):
-                st.plotly_chart(forecast_category(filtered_df, periods=forecast_days),
-                                use_container_width=True)
+                # --- Remove rows with missing Date or Amount ---
+                clean_df = filtered_df.dropna(subset=["Date", "Amount"])
+                
+                # --- Ensure there are enough points to fit a linear model ---
+                if len(clean_df) < 2:
+                    st.warning("Not enough data for forecasting.")
+                else:
+                    try:
+                        st.plotly_chart(forecast_category(clean_df, periods=forecast_days),
+                                        use_container_width=True)
+                    except np.linalg.LinAlgError:
+                        st.warning("Forecasting failed: data is insufficient or degenerate.")
+
 
     else:  # --- Income vs Expense ---
         if incomes_df.empty and expenses_df.empty:

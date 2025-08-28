@@ -49,13 +49,21 @@ def run_dashboard():
     incomes_df = pd.read_sql("SELECT * FROM incomes", engine)
     expenses_df = pd.read_sql("SELECT * FROM expenses", engine)
     budgets_df = pd.read_sql("SELECT * FROM budgets", engine)
+    categories_df = pd.read_sql("SELECT category, type, color, icon FROM categories", engine)
 
+    # --- Merge categories for colors/icons ---
     for df in [incomes_df, expenses_df]:
         df["date"] = pd.to_datetime(df["date"])
         df["month"] = df["date"].dt.month
         df["year"] = df["date"].dt.year
+        df = df.merge(categories_df, on=["category", "type"], how="left")
+        df["color"].fillna("#808080", inplace=True)
+        df["icon"].fillna("❓", inplace=True)
 
     budgets_df = budgets_df[(budgets_df["month"] == month) & (budgets_df["year"] == year)]
+    budgets_df = budgets_df.merge(categories_df, on=["category", "type"], how="left")
+    budgets_df["color"].fillna("#808080", inplace=True)
+    budgets_df["icon"].fillna("❓", inplace=True)
 
     # --- Single Type View ---
     if view_type == "Single Type":
@@ -65,9 +73,9 @@ def run_dashboard():
         filtered_df = filter_period(df, period)
 
         if show_recurring:
-            filtered_df = filtered_df[filtered_df["comment"]=="Recurring"]
+            filtered_df = filtered_df[filtered_df["comment"].str.lower() == "recurring"]
         elif show_non_recurring:
-            filtered_df = filtered_df[filtered_df["comment"]!="Recurring"]
+            filtered_df = filtered_df[filtered_df["comment"].str.lower() != "recurring"]
 
         # --- Metrics ---
         col1, col2 = st.columns(2)
@@ -94,9 +102,9 @@ def run_dashboard():
         filtered_df = filter_period(df, period)
 
         if show_recurring:
-            filtered_df = filtered_df[filtered_df["comment"]=="Recurring"]
+            filtered_df = filtered_df[filtered_df["comment"].str.lower() == "recurring"]
         elif show_non_recurring:
-            filtered_df = filtered_df[filtered_df["comment"]!="Recurring"]
+            filtered_df = filtered_df[filtered_df["comment"].str.lower() != "recurring"]
 
         # --- Metrics ---
         total_income = filtered_df.loc[filtered_df["type"]=="Income","amount"].sum()
@@ -157,7 +165,7 @@ def run_dashboard():
     actual_expense = filtered_df[filtered_df["type"]=="Expense"].groupby("category")["amount"].sum().reset_index()
     actual_df = pd.concat([actual_income, actual_expense], ignore_index=True)
     merged_budget = pd.merge(budgets_df, actual_df, on=["category","type"], how="left").fillna(0)
-    st.dataframe(merged_budget[["category","type","budget","amount"]])
+    st.dataframe(merged_budget[["category","type","budget","amount","color","icon"]])
 
     # --- Alerts ---
     st.subheader("Budget Alerts")

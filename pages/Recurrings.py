@@ -10,7 +10,7 @@ def run_recurring():
     DB_URL = st.secrets["postgres"]["url"]
     engine = create_engine(DB_URL)
 
-    # --- Load recurring transactions ---
+    # --- Load active recurring transactions ---
     recurring_df = pd.read_sql("SELECT * FROM recurrings WHERE active = TRUE", engine)
     if recurring_df.empty:
         st.warning("No active recurring transactions found.")
@@ -45,16 +45,17 @@ def run_recurring():
 
     # --- Generate and insert future entries ---
     new_entries_count = 0
-    for _, row in recurring_df.iterrows():
-        future_dates = generate_dates(row)
-        table = "incomes" if row["type"] == "Income" else "expenses"
+    with engine.begin() as conn:
+        for _, row in recurring_df.iterrows():
+            future_dates = generate_dates(row)
+            table = "incomes" if row["type"] == "Income" else "expenses"
 
-        for date in future_dates:
-            engine.execute(text(f"""
-                INSERT INTO {table} (date, category, amount, title, comment)
-                VALUES (:date, :category, :amount, :title, 'Recurring')
-            """), {"date": date, "category": row["category"], "amount": row["amount"], "title": row["title"]})
-            new_entries_count += 1
+            for date in future_dates:
+                conn.execute(text(f"""
+                    INSERT INTO {table} (date, category, amount, title, comment)
+                    VALUES (:date, :category, :amount, :title, 'Recurring')
+                """), {"date": date, "category": row["category"], "amount": row["amount"], "title": row["title"]})
+                new_entries_count += 1
 
     st.success(f"{new_entries_count} recurring entries generated!")
 

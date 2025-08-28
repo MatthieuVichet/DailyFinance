@@ -21,18 +21,19 @@ def run_recordings():
         with st.form("add_category_form"):
             new_cat_name = st.text_input("Category Name")
             new_cat_type = st.selectbox("Type", ["Income","Expense"])
-            new_cat_color = st.color_picker("Color")
+            new_cat_color = st.color_picker("Color", value="#FFFFFF")
             new_cat_icon = st.text_input("Icon (emoji or text)")
             submitted = st.form_submit_button("Add Category")
             if submitted and new_cat_name:
                 if new_cat_name in cat_df["category"].values:
                     st.warning("Category already exists!")
                 else:
-                    engine.execute(text("""
-                        INSERT INTO categories (category, type, color, icon)
-                        VALUES (:category, :type, :color, :icon)
-                    """), {"category": new_cat_name, "type": new_cat_type,
-                           "color": new_cat_color, "icon": new_cat_icon})
+                    with engine.begin() as conn:
+                        conn.execute(text("""
+                            INSERT INTO categories (category, type, color, icon)
+                            VALUES (:category, :type, :color, :icon)
+                        """), {"category": new_cat_name, "type": new_cat_type,
+                               "color": new_cat_color, "icon": new_cat_icon})
                     st.success(f"Category '{new_cat_name}' added!")
                     cat_df = pd.read_sql("SELECT * FROM categories", engine)
 
@@ -45,19 +46,21 @@ def run_recordings():
             new_color = st.color_picker("Color", value=row["color"] if pd.notna(row["color"]) else "#FFFFFF")
             new_icon = st.text_input("Icon", value=row["icon"] if pd.notna(row["icon"]) else "")
             if st.button("Save Changes"):
-                engine.execute(text("""
-                    UPDATE categories
-                    SET category=:new_name, type=:new_type, color=:color, icon=:icon
-                    WHERE category=:old_name
-                """), {"new_name": new_name, "new_type": new_type,
-                       "color": new_color, "icon": new_icon, "old_name": edit_cat})
+                with engine.begin() as conn:
+                    conn.execute(text("""
+                        UPDATE categories
+                        SET category=:new_name, type=:new_type, color=:color, icon=:icon
+                        WHERE category=:old_name
+                    """), {"new_name": new_name, "new_type": new_type,
+                           "color": new_color, "icon": new_icon, "old_name": edit_cat})
                 st.success(f"Category '{edit_cat}' updated!")
                 cat_df = pd.read_sql("SELECT * FROM categories", engine)
 
         # Delete category
         del_cat = st.selectbox("Delete Category", options=[""] + cat_df["category"].tolist())
         if del_cat and st.button("Delete Category"):
-            engine.execute(text("DELETE FROM categories WHERE category=:category"), {"category": del_cat})
+            with engine.begin() as conn:
+                conn.execute(text("DELETE FROM categories WHERE category=:category"), {"category": del_cat})
             st.success(f"Category '{del_cat}' deleted!")
             cat_df = pd.read_sql("SELECT * FROM categories", engine)
 
@@ -100,27 +103,28 @@ def run_recordings():
     # --- Save Transaction ---
     if st.button("Save Transaction"):
         table = "incomes" if exp_or_inc=="Income" else "expenses"
-        # Insert main transaction
-        engine.execute(text(f"""
-            INSERT INTO {table} (date, category, amount, title, comment)
-            VALUES (:date, :category, :amount, :title, :comment)
-        """), {"date": date, "category": category, "amount": amount,
-               "title": title, "comment": "Recurring" if is_recurring else comment})
+        with engine.begin() as conn:
+            # Insert main transaction
+            conn.execute(text(f"""
+                INSERT INTO {table} (date, category, amount, title, comment)
+                VALUES (:date, :category, :amount, :title, :comment)
+            """), {"date": date, "category": category, "amount": amount,
+                   "title": title, "comment": "Recurring" if is_recurring else comment})
 
-        # Insert recurring transactions
-        if is_recurring:
-            future_dates = generate_dates(date, end_date, frequency)
-            for d in future_dates[1:]:
-                engine.execute(text(f"""
-                    INSERT INTO {table} (date, category, amount, title, comment)
-                    VALUES (:date, :category, :amount, :title, 'Recurring')
-                """), {"date": d, "category": category, "amount": amount, "title": title})
+            # Insert recurring transactions
+            if is_recurring:
+                future_dates = generate_dates(date, end_date, frequency)
+                for d in future_dates[1:]:
+                    conn.execute(text(f"""
+                        INSERT INTO {table} (date, category, amount, title, comment)
+                        VALUES (:date, :category, :amount, :title, 'Recurring')
+                    """), {"date": d, "category": category, "amount": amount, "title": title})
 
-            # Save to recurrings table
-            engine.execute(text("""
-                INSERT INTO recurrings (title, category, amount, type, start_date, frequency, end_date, active)
-                VALUES (:title, :category, :amount, :type, :start_date, :frequency, :end_date, TRUE)
-            """), {"title": title, "category": category, "amount": amount,
-                   "type": exp_or_inc, "start_date": date, "frequency": frequency, "end_date": end_date})
+                # Save to recurrings table
+                conn.execute(text("""
+                    INSERT INTO recurrings (title, category, amount, type, start_date, frequency, end_date, active)
+                    VALUES (:title, :category, :amount, :type, :start_date, :frequency, :end_date, TRUE)
+                """), {"title": title, "category": category, "amount": amount,
+                       "type": exp_or_inc, "start_date": date, "frequency": frequency, "end_date": end_date})
 
         st.success(f"{exp_or_inc} transaction saved successfully!")

@@ -4,6 +4,8 @@ def run_dashboard():
     from datetime import datetime, timedelta
     from sqlalchemy import create_engine
     import plotly.graph_objects as go
+    import socket
+    from urllib.parse import urlparse, urlunparse
     from src.features.charts import (
         category_pie, category_bar, category_line_with_trend,
         forecast_category, budget_bar_chart
@@ -13,8 +15,27 @@ def run_dashboard():
 
     # --- DB connection ---
     DB_URL = st.secrets["postgres"]["url"]
-    engine = create_engine(DB_URL, connect_args={"sslmode": "require"})
 
+    # Parse the URL
+    parsed = urlparse(DB_URL)
+    hostname = parsed.hostname
+
+    # Resolve IPv4 address
+    ipv4_address = socket.gethostbyname(hostname)
+
+    # Rebuild DB URL with IPv4 host
+    netloc = f"{parsed.username}:{parsed.password}@{ipv4_address}:{parsed.port}"
+    ipv4_db_url = urlunparse((
+        parsed.scheme,
+        netloc,
+        parsed.path,
+        parsed.params,
+        parsed.query,
+        parsed.fragment
+    ))
+
+    # Create engine with SSL
+    engine = create_engine(ipv4_db_url, connect_args={"sslmode": "require"})
 
 
     # --- Sidebar Filters ---

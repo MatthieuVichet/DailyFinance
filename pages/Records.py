@@ -8,7 +8,7 @@ def run_recordings():
 
     # --- Database connection ---
     DB_URL = st.secrets["postgres"]["url"]
-    engine = create_engine(DB_URL, connect_args={"sslmode": "require"})
+    engine = create_engine(DB_URL)
 
     # --- Load categories ---
     cat_df = pd.read_sql("SELECT * FROM categories", engine)

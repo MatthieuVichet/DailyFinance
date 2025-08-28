@@ -55,6 +55,7 @@ def run_login():
 
         if st.button("Don't have an account? Sign up"):
             st.session_state.show_signup = True
+            st.rerun()
 
     else:
         st.subheader("Create a new account")
@@ -81,6 +82,7 @@ def run_login():
 
         if st.button("Already have an account? Login"):
             st.session_state.show_signup = False
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 

@@ -18,27 +18,23 @@ def run_login():
 
     # --- Page layout ---
     st.set_page_config(page_title="Login / Sign Up", page_icon="🔑", layout="centered")
-
-    st.markdown(
-        """
+    st.markdown("""
         <style>
         .main {background-color: #f5f5f5;}
         .stButton>button {background-color:#4CAF50;color:white;height:3em;width:100%;}
         .stTextInput>div>div>input {height:2em;}
-        .login-box {background-color:white;padding:2em;border-radius:15px;box-shadow: 0 0 20px rgba(0,0,0,0.1);}
-        .link {color: #1a73e8; cursor:pointer; text-decoration: underline;}
+        .login-box {background-color:white;padding:2em;border-radius:15px;
+                     box-shadow: 0 0 20px rgba(0,0,0,0.1);}
         </style>
-        """, unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
     st.markdown("<div class='login-box'>", unsafe_allow_html=True)
     st.title("🔑 Welcome")
 
-    # Toggle between login/signup
+    # --- Login or Signup Form ---
     if not st.session_state.show_signup:
         st.subheader("Login to your account")
-        email = st.text_input("Email", key="login_email")
-        email = email.lower()
+        email = st.text_input("Email", key="login_email").lower()
         password = st.text_input("Password", type="password", key="login_pw")
         
         if st.button("Login"):
@@ -57,17 +53,15 @@ def run_login():
             except Exception as e:
                 st.error(f"Error logging in: {e}")
 
-        st.markdown(
-            "<p class='link' onclick='window.dispatchEvent(new Event(\"signup_toggle\"))'>Don't have an account? Sign up</p>",
-            unsafe_allow_html=True
-        )
+        if st.button("Don't have an account? Sign up"):
+            st.session_state.show_signup = True
+
     else:
         st.subheader("Create a new account")
-        new_email = st.text_input("Email", key="signup_email")
-        new_email = new_email.lower()
+        new_email = st.text_input("Email", key="signup_email").lower()
         new_password = st.text_input("Password", type="password", key="signup_pw")
         full_name = st.text_input("Full Name (optional)", key="signup_name")
-        
+
         if st.button("Sign Up"):
             try:
                 existing_users = conn.table("users").select("*").eq("email", new_email).execute().data
@@ -85,14 +79,12 @@ def run_login():
             except Exception as e:
                 st.error(f"Error signing up: {e}")
 
-        st.markdown(
-            "<p class='link' onclick='window.dispatchEvent(new Event(\"signup_toggle\"))'>Already have an account? Login</p>",
-            unsafe_allow_html=True
-        )
+        if st.button("Already have an account? Login"):
+            st.session_state.show_signup = False
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Logout button if logged in
+    # --- Logout button ---
     if st.session_state.user_id:
         if st.button("Logout"):
             st.session_state.user_id = None

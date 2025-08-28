@@ -1,0 +1,8 @@
+# data
+src/data/*.xlsx
+*.csv
+*.parquet
+
+# local config
+.env
+.streamlit/secrets.toml

@@ -53,36 +53,33 @@ def run_dashboard():
         if df.empty:
             return df
 
-        # Normalize column names depending on table
+        # Rename for dashboard consistency, but KEEP category_id for merges
         rename_map = {}
-
         if table in ["incomes", "expenses"]:
             rename_map = {
                 "date": "Date",
                 "amount": "Amount",
                 "comment": "Comment",
-                "title": "Title",
-                "category_id": "Category"
+                "title": "Title"
+                # DON'T rename category_id here
             }
-
         elif table == "budgets":
             rename_map = {
                 "budget": "Budget",
                 "amount": "Amount",
                 "month": "Month",
                 "year": "Year",
-                "type": "Type",
-                "category_id": "Category"
+                "type": "Type"
+                # DON'T rename category_id here
             }
-
         elif table == "categories":
             rename_map = {
                 "category": "Category",
                 "type": "Type",
                 "color": "Color",
                 "icon": "Icon"
+                # Keep id as-is for merge
             }
-
         elif table == "recurrings":
             rename_map = {
                 "title": "Title",
@@ -91,11 +88,10 @@ def run_dashboard():
                 "start_date": "Date",
                 "frequency": "Frequency",
                 "end_date": "EndDate",
-                "active": "Active",
-                "category_id": "Category"
+                "active": "Active"
+                # Keep category_id
             }
 
-        # Apply renaming
         df = df.rename(columns=rename_map)
 
         # Ensure Date columns are datetime
@@ -103,6 +99,7 @@ def run_dashboard():
             df["Date"] = pd.to_datetime(df["Date"])
 
         return df
+
 
 
     # --- Load data from Supabase ---
@@ -113,9 +110,23 @@ def run_dashboard():
 
     # Join categories info
     if not categories_df.empty:
-        for df in [incomes_df, expenses_df, budgets_df]:
+        for name, df in zip(["incomes_df", "expenses_df", "budgets_df"],
+                            [incomes_df, expenses_df, budgets_df]):
             if not df.empty:
-                df = df.merge(categories_df, left_on="category_id", right_on="id", how="left")
+                df_merged = df.merge(
+                    categories_df,
+                    left_on="category_id",  # keep category_id for merge
+                    right_on="id",
+                    how="left",
+                    suffixes=("", "_cat")
+                )
+                # Overwrite df variable in global scope
+                if name == "incomes_df":
+                    incomes_df = df_merged
+                elif name == "expenses_df":
+                    expenses_df = df_merged
+                elif name == "budgets_df":
+                    budgets_df = df_merged
 
     # --- Views ---
     if view_type == "Single Type":

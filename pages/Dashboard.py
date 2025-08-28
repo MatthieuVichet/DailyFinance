@@ -13,7 +13,8 @@ def run_dashboard():
 
     # --- DB connection ---
     DB_URL = st.secrets["postgres"]["url"]
-    engine = create_engine(DB_URL)
+    engine = create_engine(DB_URL, connect_args={"sslmode": "require"})
+
 
     # --- Sidebar Filters ---
     st.sidebar.header("Filters")
@@ -49,7 +50,7 @@ def run_dashboard():
         df = pd.read_sql(query, engine)
         # Ensure all necessary columns exist
         for col, default in [("category","Unknown"), ("amount",0), ("type","Unknown"),
-                             ("color","#808080"), ("icon","❓"), ("date",pd.Timestamp.today()), ("comment","")]:
+                            ("color","#808080"), ("icon","❓"), ("date",pd.Timestamp.today()), ("comment","")]:
             if col not in df.columns:
                 df[col] = default
         # Rename to match chart functions
@@ -141,7 +142,7 @@ def run_dashboard():
                     temp = cat_data[cat_data["Type"]==t]
                     fig_cat.add_trace(go.Bar(x=temp["Category"], y=temp["Amount"], name=t))
                 fig_cat.update_layout(title="Income vs Expense per Category", barmode="group",
-                                      xaxis_title="Category", yaxis_title="Amount")
+                                    xaxis_title="Category", yaxis_title="Amount")
                 st.plotly_chart(fig_cat, use_container_width=True)
 
             with st.expander("Historical Income vs Expense"):
@@ -153,7 +154,7 @@ def run_dashboard():
                 net_data = hist_data.pivot(index="Date", columns="Type", values="Amount").fillna(0)
                 net_data["Net"] = net_data.get("Income",0)-net_data.get("Expense",0)
                 fig_hist.add_trace(go.Scatter(x=net_data.index, y=net_data["Net"], mode="lines+markers",
-                                              name="Net", line=dict(color="black", dash="dash")))
+                                            name="Net", line=dict(color="black", dash="dash")))
                 fig_hist.update_layout(title="Historical Income vs Expense", xaxis_title="Date", yaxis_title="Amount")
                 st.plotly_chart(fig_hist, use_container_width=True)
 

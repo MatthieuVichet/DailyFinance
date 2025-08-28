@@ -1,12 +1,29 @@
 import streamlit as st
 
-st.set_page_config(page_title="Finance App", layout="wide")
+# --- Page config ---
+st.set_page_config(
+    page_title="Finance App",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- Sidebar Navigation ---
+# --- Hide all default Streamlit UI ---
+st.markdown("""
+    <style>
+        .reportview-container {
+            margin-top: -10rem;
+        }
+    [data-testid="stSidebarNav"] {display: none;}
+
+        footer {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Your custom sidebar navigation ---
 st.sidebar.title("Navigation")
 page = st.sidebar.selectbox("Go to", ["Dashboard", "Recordings", "Recurring"])
 
-# --- Import pages ---
+# --- Load Pages ---
 if page == "Dashboard":
     from pages.Dashboard import run_dashboard
     run_dashboard()

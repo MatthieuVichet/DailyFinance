@@ -19,6 +19,9 @@ def run_recurring():
     recurring_df["start_date"] = pd.to_datetime(recurring_df["start_date"])
     recurring_df["end_date"] = pd.to_datetime(recurring_df["end_date"])
 
+    # --- Load categories for display purposes ---
+    categories_df = pd.read_sql("SELECT id, category FROM categories", engine)
+
     # --- Helper: generate future dates ---
     def generate_dates(row):
         dates = []
@@ -52,13 +55,14 @@ def run_recurring():
 
             for date in future_dates:
                 conn.execute(text(f"""
-                    INSERT INTO {table} (date, category, amount, title, comment)
-                    VALUES (:date, :category, :amount, :title, 'Recurring')
-                """), {"date": date, "category": row["category"], "amount": row["amount"], "title": row["title"]})
+                    INSERT INTO {table} (date, category_id, amount, title, comment)
+                    VALUES (:date, :category_id, :amount, :title, 'Recurring')
+                """), {"date": date, "category_id": row["category_id"], "amount": row["amount"], "title": row["title"]})
                 new_entries_count += 1
 
     st.success(f"{new_entries_count} recurring entries generated!")
 
     # --- Display active recurring transactions ---
+    recurring_display_df = recurring_df.merge(categories_df, left_on="category_id", right_on="id", how="left")
     st.subheader("Active Recurring Transactions")
-    st.dataframe(recurring_df)
+    st.dataframe(recurring_display_df[["title","category","amount","type","start_date","frequency","end_date"]])

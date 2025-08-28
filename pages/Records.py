@@ -68,8 +68,12 @@ def run_recordings():
     st.subheader("Record Transaction")
     exp_or_inc = st.selectbox("Is it an expense or an income?", options=["Expense","Income"])
     date = st.date_input("Date")
-    categories_for_type = cat_df[cat_df["type"]==exp_or_inc]["category"].tolist()
-    category = st.selectbox("Category", options=categories_for_type)
+
+    # Show category names for selection, but get category_id for inserts
+    categories_for_type = cat_df[cat_df["type"]==exp_or_inc][["id","category"]]
+    category_name = st.selectbox("Category", options=categories_for_type["category"].tolist())
+    category_id = categories_for_type[categories_for_type["category"]==category_name]["id"].values[0]
+
     amount = st.number_input("Amount")
     title = st.text_input("Title")
     comment = st.text_area("Commentary")
@@ -99,32 +103,53 @@ def run_recordings():
             else:
                 break
         return dates
-
-    # --- Save Transaction ---
+# --- Save Transaction ---
     if st.button("Save Transaction"):
         table = "incomes" if exp_or_inc=="Income" else "expenses"
+        
+        # Convert to native Python types
+        category_id_py = int(category_id)
+        amount_py = float(amount)
+        
         with engine.begin() as conn:
-            # Insert main transaction
+            # Insert main transaction (date-only)
             conn.execute(text(f"""
-                INSERT INTO {table} (date, category, amount, title, comment)
-                VALUES (:date, :category, :amount, :title, :comment)
-            """), {"date": date, "category": category, "amount": amount,
-                   "title": title, "comment": "Recurring" if is_recurring else comment})
+                INSERT INTO {table} (date, category_id, amount, title, comment)
+                VALUES (:date, :category_id, :amount, :title, :comment)
+            """), {
+                "date": date,  # already datetime.date from st.date_input
+                "category_id": category_id_py,
+                "amount": amount_py,
+                "title": title,
+                "comment": "Recurring" if is_recurring else comment
+            })
 
             # Insert recurring transactions
             if is_recurring:
                 future_dates = generate_dates(date, end_date, frequency)
                 for d in future_dates[1:]:
                     conn.execute(text(f"""
-                        INSERT INTO {table} (date, category, amount, title, comment)
-                        VALUES (:date, :category, :amount, :title, 'Recurring')
-                    """), {"date": d, "category": category, "amount": amount, "title": title})
+                        INSERT INTO {table} (date, category_id, amount, title, comment)
+                        VALUES (:date, :category_id, :amount, :title, 'Recurring')
+                    """), {
+                        "date": d,  # each d is a datetime.date
+                        "category_id": category_id_py,
+                        "amount": amount_py,
+                        "title": title
+                    })
 
                 # Save to recurrings table
                 conn.execute(text("""
-                    INSERT INTO recurrings (title, category, amount, type, start_date, frequency, end_date, active)
-                    VALUES (:title, :category, :amount, :type, :start_date, :frequency, :end_date, TRUE)
-                """), {"title": title, "category": category, "amount": amount,
-                       "type": exp_or_inc, "start_date": date, "frequency": frequency, "end_date": end_date})
+                    INSERT INTO recurrings (title, category_id, amount, type, start_date, frequency, end_date, active)
+                    VALUES (:title, :category_id, :amount, :type, :start_date, :frequency, :end_date, TRUE)
+                """), {
+                    "title": title,
+                    "category_id": category_id_py,
+                    "amount": amount_py,
+                    "type": exp_or_inc,
+                    "start_date": date,
+                    "frequency": frequency,
+                    "end_date": end_date
+                })
 
         st.success(f"{exp_or_inc} transaction saved successfully!")

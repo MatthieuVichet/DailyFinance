@@ -32,7 +32,7 @@ def run_recordings():
             new_cat_type = st.selectbox("Type", ["Income", "Expense"])
             new_cat_color = st.color_picker("Color", value="#FFFFFF")
             new_cat_icon = st.text_input("Icon (emoji or text)")
-            submitted = st.form_submit_button("Add Category")
+            submitted = st.form_submit_button("Add Category", type="primary")
 
             if submitted and new_cat_name:
                 if (

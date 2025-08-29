@@ -1,7 +1,3 @@
-# pages/Settings.py
-import streamlit as st
-from st_supabase_connection import SupabaseConnection
-import bcrypt
 
 def run_settings():
     # pages/Settings.py

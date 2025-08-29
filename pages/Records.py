@@ -4,27 +4,25 @@ def run_recordings():
     from datetime import datetime, timedelta
     from st_supabase_connection import SupabaseConnection
 
+    # --- Require login ---
     if "user_id" not in st.session_state or st.session_state.user_id is None:
         from pages.Login import run_login
         run_login()
-        return  # stop running recordings until login
+        return
 
     st.title("New Expense/Income Recording & Category Management")
 
     # --- Connect to Supabase ---
     conn = st.connection("supabase", type=SupabaseConnection)
 
-    # --- Load categories ---
-    cat_df = pd.DataFrame(
-        conn.table("categories")
-            .select("*")
-            .eq("user_id", st.session_state.user_id)
-            .execute().data
-    )
+    # --- Load categories safely ---
+    cat_data = conn.table("categories") \
+        .select("*") \
+        .eq("user_id", st.session_state.user_id) \
+        .execute().data
+    cat_df = pd.DataFrame(cat_data)
 
-    # --- Category Management ---
-
-# --- Category Management ---
+    # --- CATEGORY MANAGEMENT ---
     st.subheader("Category Management")
     with st.expander("Add/Edit/Delete Categories"):
 
@@ -35,8 +33,13 @@ def run_recordings():
             new_cat_color = st.color_picker("Color", value="#FFFFFF")
             new_cat_icon = st.text_input("Icon (emoji or text)")
             submitted = st.form_submit_button("Add Category")
+
             if submitted and new_cat_name:
-                if not cat_df.empty and "category" in cat_df.columns and new_cat_name in cat_df["category"].values:
+                if (
+                    not cat_df.empty
+                    and "category" in cat_df.columns
+                    and new_cat_name in cat_df["category"].values
+                ):
                     st.warning("Category already exists!")
                 else:
                     conn.table("categories").insert({
@@ -47,15 +50,10 @@ def run_recordings():
                         "user_id": st.session_state.user_id,
                     }).execute()
                     st.success(f"Category '{new_cat_name}' added!")
-                    cat_df = pd.DataFrame(
-                        conn.table("categories")
-                            .select("*")
-                            .eq("user_id", st.session_state.user_id)
-                            .execute().data
-                    )
+                    st.rerun()
 
-        if not cat_df.empty and "category" in cat_df.columns:
-            # Edit category
+        if not cat_df.empty and {"id", "category", "type"}.issubset(cat_df.columns):
+            # --- Edit category ---
             edit_cat = st.selectbox("Edit Category", options=[""] + cat_df["category"].tolist())
             if edit_cat:
                 row = cat_df[cat_df["category"] == edit_cat].iloc[0]
@@ -69,33 +67,38 @@ def run_recordings():
                         "type": new_type,
                         "color": new_color,
                         "icon": new_icon,
-                    }).eq("id", row["id"])\
-                    .eq("user_id", st.session_state.user_id)\
-                    .execute()
+                    }).eq("id", row["id"]) \
+                     .eq("user_id", st.session_state.user_id) \
+                     .execute()
                     st.success(f"Category '{edit_cat}' updated!")
+                    st.rerun()
 
-            # Delete category
+            # --- Delete category ---
             del_cat = st.selectbox("Delete Category", options=[""] + cat_df["category"].tolist())
             if del_cat and st.button("Delete Category"):
-                conn.table("categories").delete()\
-                    .eq("category", del_cat)\
-                    .eq("user_id", st.session_state.user_id)\
+                conn.table("categories").delete() \
+                    .eq("category", del_cat) \
+                    .eq("user_id", st.session_state.user_id) \
                     .execute()
                 st.success(f"Category '{del_cat}' deleted!")
+                st.rerun()
         else:
             st.info("No categories available yet. Add one first.")
 
-
-    # --- Record Transaction ---
+    # --- RECORD TRANSACTION ---
     st.subheader("Record Transaction")
     exp_or_inc = st.selectbox("Is it an expense or an income?", options=["Expense", "Income"])
     date = st.date_input("Date")
 
-    # Show category names for selection, but get category_id for inserts
+    if cat_df.empty or not {"id", "category", "type"}.issubset(cat_df.columns):
+        st.warning("⚠️ No categories found. Please add categories first.")
+        return
+
     categories_for_type = cat_df[cat_df["type"] == exp_or_inc][["id", "category"]]
     if categories_for_type.empty:
-        st.warning("No categories found for this type. Please add one first.")
+        st.warning(f"No categories found for {exp_or_inc}. Please add one first.")
         return
+
     category_name = st.selectbox("Category", options=categories_for_type["category"].tolist())
     category_id = categories_for_type[categories_for_type["category"] == category_name]["id"].values[0]
 

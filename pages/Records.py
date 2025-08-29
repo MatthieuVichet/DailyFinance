@@ -23,6 +23,8 @@ def run_recordings():
     )
 
     # --- Category Management ---
+
+# --- Category Management ---
     st.subheader("Category Management")
     with st.expander("Add/Edit/Delete Categories"):
 
@@ -34,7 +36,7 @@ def run_recordings():
             new_cat_icon = st.text_input("Icon (emoji or text)")
             submitted = st.form_submit_button("Add Category")
             if submitted and new_cat_name:
-                if new_cat_name in cat_df["category"].values:
+                if not cat_df.empty and "category" in cat_df.columns and new_cat_name in cat_df["category"].values:
                     st.warning("Category already exists!")
                 else:
                     conn.table("categories").insert({
@@ -52,45 +54,37 @@ def run_recordings():
                             .execute().data
                     )
 
-        # Edit category
-        edit_cat = st.selectbox("Edit Category", options=[""] + cat_df["category"].tolist())
-        if edit_cat:
-            row = cat_df[cat_df["category"] == edit_cat].iloc[0]
-            new_name = st.text_input("Category Name", value=row["category"])
-            new_type = st.selectbox("Type", ["Income", "Expense"], index=0 if row["type"] == "Income" else 1)
-            new_color = st.color_picker("Color", value=row["color"] if pd.notna(row["color"]) else "#FFFFFF")
-            new_icon = st.text_input("Icon", value=row["icon"] if pd.notna(row["icon"]) else "")
-            if st.button("Save Changes"):
-                conn.table("categories").update({
-                    "category": new_name,
-                    "type": new_type,
-                    "color": new_color,
-                    "icon": new_icon,
-                }).eq("category", edit_cat)\
-                  .eq("user_id", st.session_state.user_id)\
-                  .execute()
-                st.success(f"Category '{edit_cat}' updated!")
-                cat_df = pd.DataFrame(
-                    conn.table("categories")
-                        .select("*")
-                        .eq("user_id", st.session_state.user_id)
-                        .execute().data
-                )
+        if not cat_df.empty and "category" in cat_df.columns:
+            # Edit category
+            edit_cat = st.selectbox("Edit Category", options=[""] + cat_df["category"].tolist())
+            if edit_cat:
+                row = cat_df[cat_df["category"] == edit_cat].iloc[0]
+                new_name = st.text_input("Category Name", value=row["category"])
+                new_type = st.selectbox("Type", ["Income", "Expense"], index=0 if row["type"] == "Income" else 1)
+                new_color = st.color_picker("Color", value=row.get("color", "#FFFFFF"))
+                new_icon = st.text_input("Icon", value=row.get("icon", ""))
+                if st.button("Save Changes"):
+                    conn.table("categories").update({
+                        "category": new_name,
+                        "type": new_type,
+                        "color": new_color,
+                        "icon": new_icon,
+                    }).eq("id", row["id"])\
+                    .eq("user_id", st.session_state.user_id)\
+                    .execute()
+                    st.success(f"Category '{edit_cat}' updated!")
 
-        # Delete category
-        del_cat = st.selectbox("Delete Category", options=[""] + cat_df["category"].tolist())
-        if del_cat and st.button("Delete Category"):
-            conn.table("categories").delete()\
-                .eq("category", del_cat)\
-                .eq("user_id", st.session_state.user_id)\
-                .execute()
-            st.success(f"Category '{del_cat}' deleted!")
-            cat_df = pd.DataFrame(
-                conn.table("categories")
-                    .select("*")
-                    .eq("user_id", st.session_state.user_id)
-                    .execute().data
-            )
+            # Delete category
+            del_cat = st.selectbox("Delete Category", options=[""] + cat_df["category"].tolist())
+            if del_cat and st.button("Delete Category"):
+                conn.table("categories").delete()\
+                    .eq("category", del_cat)\
+                    .eq("user_id", st.session_state.user_id)\
+                    .execute()
+                st.success(f"Category '{del_cat}' deleted!")
+        else:
+            st.info("No categories available yet. Add one first.")
+
 
     # --- Record Transaction ---
     st.subheader("Record Transaction")

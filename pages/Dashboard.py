@@ -33,22 +33,35 @@ def run_dashboard():
     year = st.sidebar.selectbox("Select Year", list(range(today.year - 5, today.year + 2)), index=5)
 
     # --- Helper: filter by period ---
-    def filter_period(df, period):
+    def filter_period(df, period, month=None, year=None):
+        if df.empty:
+            return df
+
         if period == "Week-to-Date":
             start_date = today - pd.to_timedelta(today.weekday(), unit="d")
+            df = df[df["Date"] >= pd.to_datetime(start_date)]
         elif period == "Month-to-Date":
             start_date = today.replace(day=1)
+            df = df[df["Date"] >= pd.to_datetime(start_date)]
         elif period == "Year-to-Date":
             start_date = today.replace(month=1, day=1)
+            df = df[df["Date"] >= pd.to_datetime(start_date)]
         elif period == "Last 7 Days":
             start_date = today - timedelta(days=7)
+            df = df[df["Date"] >= pd.to_datetime(start_date)]
         elif period == "Last 30 Days":
             start_date = today - timedelta(days=30)
+            df = df[df["Date"] >= pd.to_datetime(start_date)]
         elif period == "Last 365 Days":
             start_date = today - timedelta(days=365)
-        else:
-            start_date = datetime.min
-        return df[df["Date"] >= pd.to_datetime(start_date)]
+            df = df[df["Date"] >= pd.to_datetime(start_date)]
+
+        # Apply sidebar month/year if provided
+        if "Date" in df.columns and month and year:
+            df = df[(df["Date"].dt.month == month) & (df["Date"].dt.year == year)]
+
+        return df
+
 
     # --- Load table helper ---
     def load_table(table):
@@ -143,7 +156,8 @@ def run_dashboard():
             return
 
         period = st.selectbox("Select period", period_options)
-        filtered_df = filter_period(df, period)
+        filtered_df = filter_period(df, period, month=month, year=year)
+
 
         if show_recurring:
             filtered_df = filtered_df[filtered_df["Comment"].str.lower() == "recurring"]
@@ -187,7 +201,8 @@ def run_dashboard():
         df = pd.concat([incomes_df, expenses_df], ignore_index=True)
 
         period = st.selectbox("Select period", period_options)
-        filtered_df = filter_period(df, period)
+        filtered_df = filter_period(df, period, month=month, year=year)
+
 
         if show_recurring:
             filtered_df = filtered_df[filtered_df["Comment"].str.lower() == "recurring"]
@@ -249,29 +264,53 @@ def run_dashboard():
                     }
                 ))
                 st.plotly_chart(fig_ratio, use_container_width=True)
-
-    # --- Budget vs Actual ---
+# --- Budget vs Actual ---
     if not budgets_df.empty:
-        st.subheader("Budget vs Actual per Category")
-        actual_income = filtered_df[filtered_df["Type"] == "Income"] \
-            .groupby(["Category", "Type"])["Amount"].sum().reset_index()
-        actual_expense = filtered_df[filtered_df["Type"] == "Expense"] \
-            .groupby(["Category", "Type"])["Amount"].sum().reset_index()
+        # 🔹 filter budgets for the selected month & year
+        budgets_filtered = budgets_df[
+            (budgets_df["Month"] == month) & (budgets_df["Year"] == year)
+        ]
 
-        actual_df = pd.concat([actual_income, actual_expense], ignore_index=True)
-        merged_budget = pd.merge(budgets_df, actual_df, on=["Category", "Type"], how="left").fillna(0)
+        if budgets_filtered.empty:
+            st.info(f"No budget defined for {month}/{year}.")
+        else:
+            st.subheader(f"Budget vs Actual per Category ({month}/{year})")
 
-        merged_budget.rename(columns={"Amount_y": "Amount", "Amount_x": "Budget"}, inplace=True)
+            actual_income = filtered_df[filtered_df["Type"] == "Income"] \
+                .groupby(["Category", "Type"])["Amount"].sum().reset_index()
+            actual_expense = filtered_df[filtered_df["Type"] == "Expense"] \
+                .groupby(["Category", "Type"])["Amount"].sum().reset_index()
 
-        st.dataframe(merged_budget[["Category", "Type", "Amount", "Budget", "Color", "Icon"]])
+            actual_df = pd.concat([actual_income, actual_expense], ignore_index=True)
 
-        st.subheader("Budget Alerts")
-        for _, row in merged_budget.iterrows():
-            if row["Amount"] > row["Budget"]:
-                st.warning(f"⚠️ Exceeded budget for **{row['Category']}**: "
-                           f"Spent ${row['Amount']:.2f} / Budget ${row['Budget']:.2f}")
-            else:
-                st.success(f"✅ Within budget for **{row['Category']}**: "
-                           f"Spent ${row['Amount']:.2f} / Budget ${row['Budget']:.2f}")
+            # 🔹 merge actuals with filtered budgets
+            merged_budget = pd.merge(
+                budgets_filtered,
+                actual_df,
+                on=["Category", "Type"],
+                how="left"
+            ).fillna(0)
 
-        st.plotly_chart(budget_bar_chart(merged_budget), use_container_width=True)
+            merged_budget.rename(
+                columns={"Amount_y": "Amount", "Amount_x": "Budget"},
+                inplace=True
+            )
+
+            st.dataframe(
+                merged_budget[["Category", "Type", "Amount", "Budget", "Color", "Icon"]]
+            )
+
+            st.subheader("Budget Alerts")
+            for _, row in merged_budget.iterrows():
+                if row["Amount"] > row["Budget"]:
+                    st.warning(
+                        f"⚠️ Exceeded budget for **{row['Category']}**: "
+                        f"Spent ${row['Amount']:.2f} / Budget ${row['Budget']:.2f}"
+                    )
+                else:
+                    st.success(
+                        f"✅ Within budget for **{row['Category']}**: "
+                        f"Spent ${row['Amount']:.2f} / Budget ${row['Budget']:.2f}"
+                    )
+
+            st.plotly_chart(budget_bar_chart(merged_budget), use_container_width=True)

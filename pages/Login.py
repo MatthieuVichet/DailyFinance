@@ -21,10 +21,13 @@ def run_login():
     st.markdown("""
         <style>
         .main {background-color: #f5f5f5;}
-        .stButton>button {background-color:#4CAF50;color:white;height:3em;width:100%;}
         .stTextInput>div>div>input {height:2em;}
-        .login-box {background-color:white;padding:2em;border-radius:15px;
-                     box-shadow: 0 0 20px rgba(0,0,0,0.1);}
+        .login-box {
+            background-color:white;
+            padding:2em;
+            border-radius:15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -36,8 +39,9 @@ def run_login():
         st.subheader("Login to your account")
         email = st.text_input("Email", key="login_email").lower()
         password = st.text_input("Password", type="password", key="login_pw")
-        
-        if st.button("Login"):
+
+        # Primary login button (light blue)
+        if st.button("Login", key="login_btn", type="primary"):
             try:
                 users = conn.table("users").select("*").eq("email", email).execute().data
                 if users:
@@ -53,7 +57,8 @@ def run_login():
             except Exception as e:
                 st.error(f"Error logging in: {e}")
 
-        if st.button("Don't have an account? Sign up"):
+        # Secondary toggle button (light grey)
+        if st.button("Don't have an account? Sign up", key="toggle_signup", type="secondary"):
             st.session_state.show_signup = True
             st.rerun()
 
@@ -63,7 +68,8 @@ def run_login():
         new_password = st.text_input("Password", type="password", key="signup_pw")
         full_name = st.text_input("Full Name (optional)", key="signup_name")
 
-        if st.button("Sign Up"):
+        # Primary signup button (light blue)
+        if st.button("Sign Up", key="signup_btn", type="primary"):
             try:
                 existing_users = conn.table("users").select("*").eq("email", new_email).execute().data
                 if existing_users:
@@ -76,20 +82,13 @@ def run_login():
                         "full_name": full_name
                     }).execute()
                     st.success("✅ Account created! Please login.")
-
                     st.session_state.show_signup = False
             except Exception as e:
                 st.error(f"Error signing up: {e}")
 
-        if st.button("Already have an account? Login"):
+        # Secondary toggle button (light grey)
+        if st.button("Already have an account? Login", key="toggle_login", type="secondary"):
             st.session_state.show_signup = False
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- Logout button ---
-    if st.session_state.user_id:
-        if st.button("Logout"):
-            st.session_state.user_id = None
-            st.session_state.user_email = None
-            st.success("Logged out successfully")

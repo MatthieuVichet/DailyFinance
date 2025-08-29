@@ -61,7 +61,7 @@ def run_recordings():
                 new_type = st.selectbox("Type", ["Income", "Expense"], index=0 if row["type"] == "Income" else 1)
                 new_color = st.color_picker("Color", value=row.get("color", "#FFFFFF"))
                 new_icon = st.text_input("Icon", value=row.get("icon", ""))
-                if st.button("Save Changes"):
+                if st.button("Save Changes", type='primary'):
                     conn.table("categories").update({
                         "category": new_name,
                         "type": new_type,
@@ -75,7 +75,7 @@ def run_recordings():
 
             # --- Delete category ---
             del_cat = st.selectbox("Delete Category", options=[""] + cat_df["category"].tolist())
-            if del_cat and st.button("Delete Category"):
+            if del_cat and st.button("Delete Category", type="secondary"):
                 conn.table("categories").delete() \
                     .eq("category", del_cat) \
                     .eq("user_id", st.session_state.user_id) \
@@ -133,7 +133,7 @@ def run_recordings():
         return dates
 
     # --- Save Transaction ---
-    if st.button("Save Transaction"):
+    if st.button("Save Transaction", type="primary"):
         table = "incomes" if exp_or_inc == "Income" else "expenses"
 
         # Insert main transaction
@@ -173,3 +173,58 @@ def run_recordings():
             }).execute()
 
         st.success(f"{exp_or_inc} transaction saved successfully!")
+            
+    # --- Edit/Delete Existing Transactions ---
+    st.subheader("Manage Existing Transactions")
+
+    # Load user's transactions
+    transactions_data = conn.table("incomes").select("*").eq("user_id", st.session_state.user_id).execute().data
+    expenses_data = conn.table("expenses").select("*").eq("user_id", st.session_state.user_id).execute().data
+
+    incomes_df = pd.DataFrame(transactions_data)
+    expenses_df = pd.DataFrame(expenses_data)
+
+    if not incomes_df.empty:
+        incomes_df["Type"] = "Income"
+    if not expenses_df.empty:
+        expenses_df["Type"] = "Expense"
+
+    df_all = pd.concat([incomes_df, expenses_df], ignore_index=True)
+    if df_all.empty:
+        st.info("No transactions recorded yet.")
+    else:
+        # Let user select a record to edit/delete
+        record_options = [f"{row['Type']} - {row.get('title', '')} - ${row.get('amount', 0)} ({row.get('date','')})" 
+                        for idx, row in df_all.iterrows()]
+        selected_record = st.selectbox("Select a transaction to edit/delete", options=[""] + record_options)
+
+        if selected_record:
+            # Get the selected row
+            idx = record_options.index(selected_record)
+            record = df_all.iloc[idx]
+
+            # Edit fields
+            new_date = st.date_input("Date", value=pd.to_datetime(record["date"]))
+            new_type = st.selectbox("Type", ["Income", "Expense"], index=0 if record["Type"]=="Income" else 1)
+            new_amount = st.number_input("Amount", value=float(record["amount"]))
+            new_title = st.text_input("Title", value=record.get("title",""))
+            new_comment = st.text_area("Comment", value=record.get("comment",""))
+
+            # Save changes
+            if st.button("Save Changes", type="primary"):
+                table_name = "incomes" if record["Type"]=="Income" else "expenses"
+                conn.table(table_name).update({
+                    "date": new_date.isoformat(),
+                    "amount": new_amount,
+                    "title": new_title,
+                    "comment": new_comment
+                }).eq("id", int(record["id"])).eq("user_id", st.session_state.user_id).execute()
+                st.success("Transaction updated successfully!")
+                st.rerun()
+
+            # Delete record
+            if st.button("Delete Transaction", type="secondary"):
+                table_name = "incomes" if record["Type"]=="Income" else "expenses"
+                conn.table(table_name).delete().eq("id", int(record["id"])).eq("user_id", st.session_state.user_id).execute()
+                st.success("Transaction deleted successfully!")
+                st.rerun()

@@ -10,6 +10,29 @@ def run_dashboard():
         category_pie, category_bar, category_line_with_trend,
         forecast_category, budget_bar_chart
     )
+
+    st.markdown("""
+    <style>
+    /* Primary buttons (e.g., Add, Apply, Confirm, Sign Up, Login) */
+    .stButton > button.primary {
+        background-color: #4F9DFE !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.6em 1.2em !important;
+    }
+
+    /* Secondary buttons (e.g., Edit, Delete, Cancel, navigation) */
+    .stButton > button.secondary {
+        background-color: #E5E7EB !important;
+        color: #111827 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.6em 1.2em !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
     if "user_id" not in st.session_state or st.session_state.user_id is None:
         from pages.Login import run_login
         run_login()

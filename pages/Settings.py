@@ -42,7 +42,3 @@ def run_settings():
                     conn.table("users").update({"password_hash": new_hash}) \
                         .eq("id", st.session_state.user_id).execute()
                     st.success("✅ Password updated successfully!")
-
-    st.markdown("---")
-    st.subheader("Other Profile Settings")
-    st.info("You can add additional settings here, e.g., change email, display name, etc.")

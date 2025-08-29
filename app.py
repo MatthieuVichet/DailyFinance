@@ -25,7 +25,7 @@ if "user_id" not in st.session_state or st.session_state.user_id is None:
 else:
     # --- Your custom sidebar navigation ---
     st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox("Go to", ["Dashboard", "Recordings", "Recurring"])
+    page = st.sidebar.selectbox("Go to", ["Dashboard", "Recordings", "Recurring" "Settings"])
 
     # --- Load Pages ---
     if page == "Dashboard":
@@ -37,3 +37,6 @@ else:
     elif page == "Recurring":
         from pages.Recurrings import run_recurring
         run_recurring()
+    elif page == "Settings":
+        from pages.Settings import run_settings
+        run_settings()
